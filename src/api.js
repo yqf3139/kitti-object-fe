@@ -3,7 +3,7 @@
  */
 import axios from 'axios';
 
-const BACKEND = 'http://166.111.81.159:28000';
+const BACKEND = 'http://127.0.0.1:28000';
 
 /**
  * Parses the JSON returned by a network request
@@ -41,6 +41,14 @@ export function getList(category, name) {
 
 export function getObjects(category, name, idx) {
   return axios.get(`${BACKEND}/gallery/${category}/${name}/${idx}/objects`)
+    .then(checkStatus)
+    .then(parseJSON);
+}
+
+export function processImage(category, file) {
+  const data = new FormData();
+  data.set('file', file);
+  return axios.post(`${BACKEND}/gallery/${category}/evaluating/new/img`, data)
     .then(checkStatus)
     .then(parseJSON);
 }

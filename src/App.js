@@ -8,7 +8,7 @@ import DropFileZone from './DropFileZone';
 import ErrorIndicator from './ErrorIndicator';
 import LoadingIndicator from './LoadingIndicator';
 import MyCanvas from './MyCanvas';
-import { getList, getObjects, getBackendURL } from './api'
+import { getList, getObjects, getBackendURL, processImage } from './api'
 
 class App extends Component {
 
@@ -28,30 +28,43 @@ class App extends Component {
         this.onTabSelect = this.onTabSelect.bind(this);
         this.onChange = this.onChange.bind(this);
         this.onChangeSliderValue = this.onChangeSliderValue.bind(this);
+        this.onProcessImage = this.onProcessImage.bind(this);
     }
 
     onReadFiles(files) {
         const f = files[0];
         const errors = [];
-        const that = this;
         let processing = false;
         if (f.type !== 'image/png') {
             errors.push(`${f.name} is not a valid png image`);
         } else {
             processing = true;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                that.setState({
-                    processing: false,
-                    imageObjects: [],
-                });
-                that.onChangeImageUrl(e.target.result);
-            };
-            reader.readAsDataURL(f);
+            this.onProcessImage(f);
         }
         this.setState({
             errors: errors,
             processing: processing,
+        });
+    }
+
+    onProcessImage(file) {
+        const that = this;
+        processImage('car', file)
+        .then((data) => {
+            console.log(data.idx);
+            that.setState({
+                processing: false,
+            });
+            that.onChange({
+               target: {
+                   name: 'evaluating',
+                   value: data.idx,
+               }
+            });
+        })
+        .catch((error) => {
+            const errors = [error.toString()];
+            that.setState({ errors });
         });
     }
 
@@ -80,7 +93,7 @@ class App extends Component {
         image.src = url;
         image.onload = () => {
             image.oriwidth = image.width;
-            image.oriheight = image.oriheight;
+            image.oriheight = image.height;
 
             that.setState({
                 image: image
@@ -90,14 +103,10 @@ class App extends Component {
 
     onChange(event) {
         const { name, value } = event.target;
-        console.log(name, value);
-
         if (value === '-') {
             this.setState({ image: null, imageObjects: null });
             return;
         }
-        const image = new window.Image();
-        image.src = 'http://konvajs.github.io/assets/yoda.jpg';
         const url = `${getBackendURL()}/gallery/car/${name}/${value}/img`;
         this.onChangeImageUrl(url);
         const that = this;
@@ -117,9 +126,6 @@ class App extends Component {
 
     render() {
         const { processing, errors, imageObjects, training, testing, image, slider } = this.state;
-        if (image !== null){
-            image.scale = 0.1;
-        }
         return (
         <div className="App">
             <div className="App-header">
