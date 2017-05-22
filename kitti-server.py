@@ -51,8 +51,10 @@ def get_objects(category=None, name=None, idx=None):
         return make_error_resp('File not fond', 404)
 
     df = pd.read_csv(p, sep=' ', header=None)
-    df[15] = 1
-    data = df[[0,3,4,5,6,15]]
+    if 15 not in df.columns:
+        df[15] = 1
+
+    data = df[[0,4,5,6,7,15]]
     data.columns = ['type', 'b1', 'b2', 'b3', 'b4', 'pred']
     return jsonify(data.to_dict(orient='records'))
 

@@ -1,10 +1,13 @@
 import React, { Component } from 'react';
 import { Button, Tabs, Tab } from 'react-bootstrap';
+import ReactBootstrapSlider from 'react-bootstrap-slider';
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import 'react-bootstrap-slider/src/css/bootstrap-slider.min.css';
 import DropFileZone from './DropFileZone';
 import ErrorIndicator from './ErrorIndicator';
 import LoadingIndicator from './LoadingIndicator';
+import MyCanvas from './MyCanvas';
 import { getList, getObjects, getBackendURL } from './api'
 
 class App extends Component {
@@ -14,15 +17,17 @@ class App extends Component {
         this.state = {
             processing: false,
             errors: [],
-            imageDataUrl: null,
+            image: null,
             imageObjects: null,
             training: [],
             testing: [],
+            slider: 0,
         };
 
         this.onReadFiles = this.onReadFiles.bind(this);
         this.onTabSelect = this.onTabSelect.bind(this);
         this.onChange = this.onChange.bind(this);
+        this.onChangeSliderValue = this.onChangeSliderValue.bind(this);
     }
 
     onReadFiles(files) {
@@ -37,9 +42,10 @@ class App extends Component {
             const reader = new FileReader();
             reader.onload = (e) => {
                 that.setState({
-                    // imageDataUrl: e.target.result,
                     processing: false,
+                    imageObjects: [],
                 });
+                that.onChangeImageUrl(e.target.result);
             };
             reader.readAsDataURL(f);
         }
@@ -50,7 +56,10 @@ class App extends Component {
     }
 
     onTabSelect(name) {
-        this.setState({ imageDataUrl: null, imageObjects: null });
+        this.setState({ image: null, imageObjects: null });
+        if (name === 'upload') {
+            return;
+        }
         // load the gallery list
         const that = this;
         getList('car', name)
@@ -65,15 +74,32 @@ class App extends Component {
         });
     }
 
+    onChangeImageUrl(url) {
+        const that = this;
+        const image = new window.Image();
+        image.src = url;
+        image.onload = () => {
+            image.oriwidth = image.width;
+            image.oriheight = image.oriheight;
+
+            that.setState({
+                image: image
+            });
+        }
+    }
+
     onChange(event) {
         const { name, value } = event.target;
         console.log(name, value);
 
         if (value === '-') {
-            this.setState({ imageDataUrl: null, imageObjects: null });
+            this.setState({ image: null, imageObjects: null });
             return;
         }
-        this.setState({ imageDataUrl: `${getBackendURL()}/gallery/car/${name}/${value}/img`});
+        const image = new window.Image();
+        image.src = 'http://konvajs.github.io/assets/yoda.jpg';
+        const url = `${getBackendURL()}/gallery/car/${name}/${value}/img`;
+        this.onChangeImageUrl(url);
         const that = this;
         getObjects('car', name, value)
         .then((data) => {
@@ -85,8 +111,15 @@ class App extends Component {
         });
     }
 
+    onChangeSliderValue(e) {
+       this.setState({ slider: e.target.value });
+    }
+
     render() {
-        const { processing, errors, imageDataUrl, imageObjects, training, testing } = this.state;
+        const { processing, errors, imageObjects, training, testing, image, slider } = this.state;
+        if (image !== null){
+            image.scale = 0.1;
+        }
         return (
         <div className="App">
             <div className="App-header">
@@ -135,17 +168,22 @@ class App extends Component {
                 <br/>
             </div>
             <hr/>
-            <div className="container">
-                {
-                    imageDataUrl !== null &&
-                    <img className="center-block" src={imageDataUrl} width="100%" alt="preview" />
-                }
-                {
-                    imageObjects !== null &&
-                    <pre>{JSON.stringify(imageObjects, null, 2)}</pre>
-                }
-                <br/>
-            </div>
+            {
+                image !== null && imageObjects !== null &&
+                <div className="container">
+                    <label>Threshold: </label>
+                    <ReactBootstrapSlider
+                        value={slider}
+                        change={this.onChangeSliderValue}
+                        slideStop={this.onChangeSliderValue}
+                        step={0.1}
+                        max={1}
+                        min={0}
+                    />
+                    <br/>
+                    <MyCanvas image={image} objects={imageObjects.filter((item) => item.pred >= slider)}/>
+                </div>
+            }
         </div>
         );
     }
