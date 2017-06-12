@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Button, Tabs, Tab } from 'react-bootstrap';
+import { Tabs, Tab } from 'react-bootstrap';
 import ReactBootstrapSlider from 'react-bootstrap-slider';
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -8,7 +8,7 @@ import DropFileZone from './DropFileZone';
 import ErrorIndicator from './ErrorIndicator';
 import LoadingIndicator from './LoadingIndicator';
 import MyCanvas from './MyCanvas';
-import { getList, getObjects, getBackendURL, processImage } from './api'
+import { getList, getObjects, getBackendURL, processImage0, processImage1 } from './api'
 
 class App extends Component {
 
@@ -22,11 +22,13 @@ class App extends Component {
             training: [],
             testing: [],
             slider: 0,
+            backendIdx: 0,
         };
 
         this.onReadFiles = this.onReadFiles.bind(this);
         this.onTabSelect = this.onTabSelect.bind(this);
         this.onChange = this.onChange.bind(this);
+        this.onBackendChange = this.onBackendChange.bind(this);
         this.onChangeSliderValue = this.onChangeSliderValue.bind(this);
         this.onProcessImage = this.onProcessImage.bind(this);
     }
@@ -49,7 +51,8 @@ class App extends Component {
 
     onProcessImage(file) {
         const that = this;
-        processImage('car', file)
+        const functor = this.state.backendIdx === 0 ? processImage0 : processImage1;
+        functor('car', file)
         .then((data) => {
             console.log(data.idx);
             that.setState({
@@ -101,6 +104,11 @@ class App extends Component {
         }
     }
 
+    onBackendChange(event) {
+        const { value } = event.target;
+        this.setState({ backendIdx: value });
+    }
+
     onChange(event) {
         const { name, value } = event.target;
         if (value === '-') {
@@ -125,7 +133,7 @@ class App extends Component {
     }
 
     render() {
-        const { processing, errors, imageObjects, training, testing, image, slider } = this.state;
+        const { processing, errors, imageObjects, training, testing, image, slider, backendIdx } = this.state;
         return (
         <div className="App">
             <div className="App-header">
@@ -138,6 +146,10 @@ class App extends Component {
                 <br/>
                 <Tabs id="chooser-tabs" onSelect={this.onTabSelect} >
                     <Tab eventKey={'upload'} title="Upload Image">
+                        <select className="form-control" name="backendIdx" value={backendIdx} onChange={this.onBackendChange}>
+                            <option key={'backend-0'} value={0}>RRC</option>)
+                            <option key={'backend-1'} value={1}>Faster R-CNN</option>)
+                        </select>
                         {!processing && <DropFileZone onFilesDropped={this.onReadFiles} message={'Drop File Here'} />}
                         {processing && <LoadingIndicator/>}
                     </Tab>
